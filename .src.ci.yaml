@@ -1,0 +1,66 @@
+on:
+  pull_request:
+    - workflows: cicd-test
+      filter:
+        source_branches: "feature/**"
+        target_branches: [ main ]
+        paths: "src/**"
+  push:
+    - workflows: cicd-integration
+      filter:
+        branches: [ feature/** ]
+        paths: "src/**"
+    - workflows: cicd-prod
+      filter:
+        branches: [ main ]
+        paths: "src/**"
+
+workflows:
+  cicd-integration:
+    tasks:
+      - name: deploy-latest
+        cubes:
+          - name: deploy-function
+            env:
+              YC_AUTHORIZED_KEY_JSON: ${{ secrets.authorized-key }}
+              YC_FOLDER_ID: <Your Yandex Cloud folder Id>
+              YC_FUNCTION_NAME: <Name of your Cloud function>
+              YC_FUNCTION_RUNTIME: <Engine runtime, eg nodejs22. Execute cli command "yc serverless function runtime list" for options>
+              YC_FUNCTION_ENTRYPOINT: <Your function entrypoint>
+              YC_FUNCTION_MEMORY: <Memory setting for your function, eg 128m>
+              YC_FUNCTION_SOURCE_PATH: .
+              INCLUDE_PATTERN: "*"
+              EXCLUDE_PATTERN: ""
+            image: cr.yandex/sourcecraft-cube/yc-function:preview
+  cicd-test:
+    tasks:
+      - name: deploy-latest
+        cubes:
+          - name: deploy-function
+            env:
+              YC_AUTHORIZED_KEY_JSON: ${{ secrets.authorized-key }}
+              YC_FOLDER_ID: <Your Yandex Cloud folder Id>
+              YC_FUNCTION_NAME: <Name of your Cloud function>
+              YC_FUNCTION_RUNTIME: <Engine runtime, eg nodejs22. Execute cli command "yc serverless function runtime list" for options>
+              YC_FUNCTION_ENTRYPOINT: <Your function entrypoint>
+              YC_FUNCTION_MEMORY: <Memory setting for your function, eg 128m>
+              YC_FUNCTION_SOURCE_PATH: .
+              INCLUDE_PATTERN: "*"
+              EXCLUDE_PATTERN: ""
+            image: cr.yandex/sourcecraft-cube/yc-function:preview
+  cicd-prod:
+    tasks:
+      - name: deploy-latest
+        cubes:
+          - name: deploy-function
+            env:
+              YC_AUTHORIZED_KEY_JSON: ${{ secrets.authorized-key }}
+              YC_FOLDER_ID: <Your Yandex Cloud folder Id>
+              YC_FUNCTION_NAME: <Name of your Cloud function>
+              YC_FUNCTION_RUNTIME: <Engine runtime, eg nodejs22. Execute cli command "yc serverless function runtime list" for options>
+              YC_FUNCTION_ENTRYPOINT: <Your function entrypoint>
+              YC_FUNCTION_MEMORY: <Memory setting for your function, eg 128m>
+              YC_FUNCTION_SOURCE_PATH: .
+              INCLUDE_PATTERN: "*"
+              EXCLUDE_PATTERN: ""
+            image: cr.yandex/sourcecraft-cube/yc-function:preview

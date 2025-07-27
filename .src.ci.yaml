@@ -64,3 +64,28 @@ workflows:
               INCLUDE_PATTERN: "*"
               EXCLUDE_PATTERN: ""
             image: cr.yandex/sourcecraft-cube/yc-function:preview
+  cicd-custom:
+    tasks:
+      - name: deploy-latest
+        env:
+          TMP_PATH: ./tmp
+          YC_AUTHORIZED_KEY_JSON: ${{ secrets.authorized-key }}
+          YC_FOLDER_ID: b1gd0tkp93l5d4qdpqal
+          YC_FUNCTION_NAME: crop-image-integration
+          YC_FUNCTION_RUNTIME: nodejs22
+          YC_FUNCTION_ENTRYPOINT: index.handler
+          YC_FUNCTION_MEMORY: 128m
+        cubes:
+          - name: install-and-run-yc
+            script:
+              - mkdir $TMP_PATH
+              - find . -type f -name "*js*" -exec cp {} $TMP_PATH \;
+              - curl -o ./yc-install.sh -L https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -a
+              - echo 'source /root/yandex-cloud/completion.zsh.inc' >>  ~/.zshrc
+              - chmod +x ./yc-install.sh && ./yc-install.sh -i /tmp/yc -n && mv /tmp/yc/bin/yc /usr/bin/yc
+              - echo "$YC_AUTHORIZED_KEY_JSON" > key.json
+              - yc config profile create sa-profile
+              - yc config set service-account-key key.json
+              - yc config set format json
+              - yc config set folder-id $YC_FOLDER_ID
+              - yc serverless function version create --function-name=$YC_FUNCTION_NAME --runtime $YC_FUNCTION_RUNTIME --entrypoint $YC_FUNCTION_ENTRYPOINT --memory $YC_FUNCTION_MEMORY --source-path $TMP_PATH

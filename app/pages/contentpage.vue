@@ -9,5 +9,5 @@ useSeoMeta({
 
 <template>
    <ContentRenderer v-if="home" :value="home" />
-   <div v-else>Home not found. Try again or contact administrator</div>
+   <div v-else>Home not found. Try again or contact administrator!</div>
 </template>

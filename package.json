@@ -10,13 +10,11 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
-    "@nuxt/content": "^3.6.3",
-    "@nuxt/ui": "^3.2.0",
+    "@nuxt/ui": "^3.3.0",
     "@nuxtjs/color-mode": "^3.5.2",
-    "better-sqlite3": "^12.2.0",
-    "nuxt": "^4.0.0",
+    "nuxt": "^4.0.2",
     "typescript": "^5.8.3",
-    "vue": "^3.5.17",
+    "vue": "^3.5.18",
     "vue-router": "^4.5.1",
     "ydb-sdk": "^5.11.1"
   },

@@ -12,7 +12,7 @@ export default defineNuxtConfig({
       ]
     }
   },
-  modules: ['@nuxt/ui', '@nuxtjs/color-mode', '@nuxt/content'],
+  modules: ['@nuxt/ui', '@nuxtjs/color-mode'],
   colorMode: {
     preference: 'system', // или 'light'/'dark'
     fallback: 'dark'

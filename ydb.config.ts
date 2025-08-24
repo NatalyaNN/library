@@ -1,5 +1,5 @@
 // ydb.config.js
-const { v1: ydb } = require('ydb-sdk');
+const { ydb } = require('ydb-sdk');
 const env = require('dotenv').config();
 
 const endpoint = process.env.DB_ENDPOINT;

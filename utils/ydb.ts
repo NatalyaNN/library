@@ -1,10 +1,22 @@
-// utils/ydb.ts
-import YDBdriver from '../ydb.config';
+import { Driver, IamAuthService } from 'ydb-sdk';
+
+const YDBdriver = new Driver({
+   endpoint: process.env.DB_ENDPOINT!,
+   database: process.env.DB_PATH!,
+   authService: new IamAuthService({
+      serviceAccountId: process.env.DB_SERVICE_ACCOUNT_ID!,
+      accessKeyId: process.env.DB_ACCESS_KEY_ID!,
+      privateKey: Buffer.from(process.env.YDB_SA_PRIVATE_KEY as string),
+      iamEndpoint: process.env.DB_IAM_ENDPOINT!,
+   }),
+});
 
 export async function initDb() {
-   await YDBdriver.init();
-   const pool = new YDBdriver.pool.ThreadsafeSessionPool();
-   await pool.init();
+   await YDBdriver.init(); // теперь доступно
+
+   const pool = YDBdriver.tableClient.createSessionPool(); // createSessionPool() без await
+   await pool.init(); // инициализация пула
+
    return pool;
 }
 
@@ -131,7 +143,7 @@ async function createTable() {
    );
   `;
 
-   const session = await YDBdriver.tableClient.createSession();
+   const session = await YDBdriver.tableClient.createSession(); // createSession() доступна
    try {
       await session.executeScheme(query);
       console.log('Таблицы успешно созданы');
@@ -140,5 +152,4 @@ async function createTable() {
    }
 }
 
-// Вызовите при старте сервера
 createTable().catch(console.error);

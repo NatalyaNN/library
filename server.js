@@ -1,6 +1,6 @@
-const express = require('express');
-const { createServer } = require('node:http');
-const { Nuxt } = require('nuxt');
+import express from 'express';
+import { createServer } from 'node:http';
+import { Nuxt } from 'nuxt';
 
 const app = express();
 const nuxt = new Nuxt({ buildDir: 'dist' });

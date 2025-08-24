@@ -1,18 +1,16 @@
-// utils/ydb.js
-const driver = require('../ydb.config');
+// utils/ydb.ts
+import YDBdriver from '../ydb.config';
 
 export async function initDb() {
-   await driver.init();
-   const pool = new driver.pool.ThreadsafeSessionPool();
+   await YDBdriver.init();
+   const pool = new YDBdriver.pool.ThreadsafeSessionPool();
    await pool.init();
    return pool;
 }
 
-// module.exports = { initDb };
-
 async function createTable() {
    const query = `
-   CREATE TABLE IF NOT EXISTS users (
+    CREATE TABLE IF NOT EXISTS users (
     user_id Utf8 NOT NULL,               -- UUID или автоинкремент
     email Utf8 NOT NULL,                 -- Уникальный email
     password_hash Utf8 NOT NULL,         -- Хеш пароля (bcrypt)
@@ -133,14 +131,14 @@ async function createTable() {
    );
   `;
 
-   const session = await driver.tableClient.createSession();
+   const session = await YDBdriver.tableClient.createSession();
    try {
       await session.executeScheme(query);
-      console.log('Таблица "books" успешно создана');
+      console.log('Таблицы успешно созданы');
    } finally {
       await session.close();
    }
 }
 
-// Вызовите функцию один раз, например, при старте сервера
+// Вызовите при старте сервера
 createTable().catch(console.error);

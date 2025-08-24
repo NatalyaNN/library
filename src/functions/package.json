@@ -1,9 +1,0 @@
-{
-   "name": "crop-image",
-   "dependencies": {
-      "sharp": "0.32.6"
-   },
-   "scripts": {
-      "test": "echo \"Error: no test specified\" && exit 0"
-   }
-}

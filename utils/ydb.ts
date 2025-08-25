@@ -1,84 +1,63 @@
-import { Driver, IamAuthService } from 'ydb-sdk';
-
-const YDBdriver = new Driver({
-   endpoint: process.env.DB_ENDPOINT!,
-   database: process.env.DB_PATH!,
-   authService: new IamAuthService({
-      serviceAccountId: process.env.DB_SERVICE_ACCOUNT_ID!,
-      accessKeyId: process.env.DB_ACCESS_KEY_ID!,
-      privateKey: Buffer.from(process.env.YDB_SA_PRIVATE_KEY as string),
-      iamEndpoint: process.env.DB_IAM_ENDPOINT!,
-   }),
-});
+import YDBdriver from './ydb.config';
 
 export async function initDb() {
-   await YDBdriver.init(); // теперь доступно
-
-   const pool = YDBdriver.tableClient.createSessionPool(); // createSessionPool() без await
-   await pool.init(); // инициализация пула
-
-   return pool;
+   if (!await YDBdriver.ready(10000)) {
+      throw new Error('Driver is not ready');
+   }
+   console.log('YDB driver initialized successfully');
+   return YDBdriver;
 }
 
-async function createTable() {
+export async function createTable() {
    const query = `
     CREATE TABLE IF NOT EXISTS users (
-    user_id Utf8 NOT NULL,               -- UUID или автоинкремент
-    email Utf8 NOT NULL,                 -- Уникальный email
-    password_hash Utf8 NOT NULL,         -- Хеш пароля (bcrypt)
-    full_name Utf8,                      -- Полное имя
-    created_at Timestamp NOT NULL,       -- Дата регистрации
-    last_login Timestamp,                -- Последний вход
-    is_active Bool DEFAULT true,         -- Активен ли аккаунт
+    user_id Utf8 NOT NULL,
+    email Utf8 NOT NULL,
+    password_hash Utf8 NOT NULL,
+    full_name Utf8,
+    created_at Timestamp NOT NULL,
+    last_login Timestamp,
+    is_active Bool DEFAULT true,
     PRIMARY KEY (user_id)
    );
 
-   CREATE UNIQUE INDEX idx_users_email ON users (email);   -- Уникальный индекс для email
+   CREATE UNIQUE INDEX idx_users_email ON users (email);
 
    CREATE TABLE roles (
-    role_id Utf8 NOT NULL,               -- UUID
-    name Utf8 NOT NULL,                  -- Название (admin, librarian, reader)
-    permissions Json,                    -- Права в JSON (например, { "create_book": true })
+    role_id Utf8 NOT NULL,
+    name Utf8 NOT NULL,
+    permissions Json,
     PRIMARY KEY (role_id)
    );
-
-   -- Примеры ролей:
-   -- Admin: { "manage_books": true, "manage_users": true }
-   -- Librarian: { "manage_books": true, "view_users": true }
-   -- Reader: { "borrow_books": true }
 
    CREATE TABLE user_roles (
     user_id Utf8 NOT NULL,
     role_id Utf8 NOT NULL,
-    assigned_at Timestamp NOT NULL,      -- Когда назначена роль
+    assigned_at Timestamp NOT NULL,
     PRIMARY KEY (user_id, role_id),
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
     FOREIGN KEY (role_id) REFERENCES roles(role_id) ON DELETE CASCADE
    );
 
    CREATE TABLE books (
-    book_id Utf8 NOT NULL,               -- UUID
-    isbn Utf8,                           -- ISBN (если есть)
-    title Utf8 NOT NULL,                 -- Название
-    description Utf8,                    -- Описание
-    publish_year Uint16,                 -- Год издания
-    cover_url Utf8,                      -- Ссылка на обложку (Object Storage)
-    file_url Utf8,                       -- Ссылка на файл (PDF/EPUB)
-    total_copies Uint32 DEFAULT 1,       -- Общее количество копий
-    available_copies Uint32 DEFAULT 1,   -- Доступные копии
-    created_at Timestamp NOT NULL,       -- Дата добавления
-    updated_at Timestamp,                -- Дата изменения
+    book_id Utf8 NOT NULL,
+    isbn Utf8,
+    title Utf8 NOT NULL,
+    description Utf8,
+    publish_year Uint16,
+    cover_url Utf8,
+    file_url Utf8,
+    total_copies Uint32 DEFAULT 1,
+    available_copies Uint32 DEFAULT 1,
+    created_at Timestamp NOT NULL,
+    updated_at Timestamp,
     PRIMARY KEY (book_id)
    );
-
-   -- Индекс для поиска по названию/автору
-   CREATE INDEX idx_books_title ON books (title);
-   CREATE INDEX idx_books_author ON books (author);
 
    CREATE TABLE authors (
     author_id Utf8 NOT NULL,
     full_name Utf8 NOT NULL,
-    bio Utf8,                            -- Биография
+    bio Utf8,
     PRIMARY KEY (author_id)
    );
 
@@ -93,7 +72,7 @@ async function createTable() {
    CREATE TABLE categories (
     category_id Utf8 NOT NULL,
     name Utf8 NOT NULL,
-    parent_id Utf8,                      -- Для иерархии (например, "Фантастика" → "Киберпанк")
+    parent_id Utf8,
     PRIMARY KEY (category_id),
     FOREIGN KEY (parent_id) REFERENCES categories(category_id) ON DELETE CASCADE
    );
@@ -110,23 +89,21 @@ async function createTable() {
     borrowing_id Utf8 NOT NULL,
     book_id Utf8 NOT NULL,
     user_id Utf8 NOT NULL,
-    borrowed_at Timestamp NOT NULL,      -- Дата выдачи
-    returned_at Timestamp,               -- Дата возврата (NULL если не возвращена)
-    due_at Timestamp NOT NULL,           -- Срок возврата
-    status Utf8 NOT NULL,                -- "active", "returned", "overdue"
+    borrowed_at Timestamp NOT NULL,
+    returned_at Timestamp,
+    due_at Timestamp NOT NULL,
+    status Utf8 NOT NULL,
     PRIMARY KEY (borrowing_id),
     FOREIGN KEY (book_id) REFERENCES books(book_id),
     FOREIGN KEY (user_id) REFERENCES users(user_id)
    );
 
-   CREATE INDEX idx_borrowings_active ON borrowings (status) WHERE status = "active";  -- Индекс для поиска активных выдач
-
    CREATE TABLE reviews (
     review_id Utf8 NOT NULL,
     book_id Utf8 NOT NULL,
     user_id Utf8 NOT NULL,
-    rating Uint8 NOT NULL,               -- Оценка (1-5)
-    text Utf8,                           -- Текст отзыва
+    rating Uint8 NOT NULL,
+    text Utf8,
     created_at Timestamp NOT NULL,
     PRIMARY KEY (review_id),
     FOREIGN KEY (book_id) REFERENCES books(book_id) ON DELETE CASCADE,
@@ -143,13 +120,87 @@ async function createTable() {
    );
   `;
 
-   const session = await YDBdriver.tableClient.createSession(); // createSession() доступна
    try {
-      await session.executeScheme(query);
+      // Правильное использование для версии 5.11.1
+      await YDBdriver.tableClient.withSession(async (session) => {
+         // Для DDL запросов используем executeSchemeQuery
+         await session.executeQuery(query);
+      });
       console.log('Таблицы успешно созданы');
-   } finally {
-      await session.close();
+   } catch (error) {
+      console.error('Ошибка при создании таблиц:', error);
+      throw error;
    }
 }
 
-createTable().catch(console.error);
+// Функция для выполнения SQL запросов
+export async function executeQuery<T>(query: string, params?: any): Promise<T[]> {
+   try {
+      let result: any;
+
+      await YDBdriver.tableClient.withSession(async (session) => {
+         // Для обычных запросов используем executeQuery
+         result = await session.executeQuery(query, params);
+      });
+
+      return result?.resultSets?.[0]?.rows?.map((row: any) => row.toObject()) as T[] || [];
+   } catch (error) {
+      console.error('Ошибка выполнения запроса:', error);
+      throw error;
+   }
+}
+
+// Функция для работы с транзакциями
+export async function withTransaction<T>(callback: (session: any) => Promise<T>): Promise<T> {
+   let result: T;
+
+   await YDBdriver.tableClient.withSession(async (session) => {
+      // Начинаем транзакцию
+      const txMeta = await session.beginTransaction({
+         serializableReadWrite: {}
+      });
+
+      try {
+         result = await callback(session);
+         // Коммитим транзакцию
+         await session.commitTransaction({ txId: txMeta.id! });
+      } catch (error) {
+         // Откатываем в случае ошибки
+         await session.rollbackTransaction({ txId: txMeta.id! });
+         throw error;
+      }
+   });
+
+   return result!;
+}
+
+// Функция для описания таблицы
+export async function describeTable(tableName: string): Promise<any> {
+   try {
+      let result: any;
+
+      await YDBdriver.tableClient.withSession(async (session) => {
+         result = await session.describeTable(tableName);
+      });
+
+      return result;
+   } catch (error) {
+      console.error('Ошибка описания таблицы:', error);
+      throw error;
+   }
+}
+
+// Простая функция для тестирования соединения
+export async function testConnection(): Promise<boolean> {
+   try {
+      await YDBdriver.tableClient.withSession(async (session) => {
+         const result = await session.executeQuery('SELECT 1 as test;');
+         console.log('Connection test successful');
+      });
+      return true;
+   } catch (error) {
+      console.error('Connection test failed:', error);
+      return false;
+   }
+}
+

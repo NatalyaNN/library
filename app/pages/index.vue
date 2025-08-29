@@ -1,5 +1,4 @@
 <script setup lang="ts">
-// Тип для книги
 interface Book {
   id: string
   title: string
@@ -9,13 +8,12 @@ interface Book {
   coverUrl?: string
 }
 
-// Состояние поиска
 const searchQuery = ref('')
 const searchResults = ref<Book[]>([])
 const isLoading = ref(false)
 const errorMessage = ref('')
 
-// Функция поиска (заглушка - в реальности API-запрос)
+// Функция поиска через API
 const searchBooks = async () => {
   if (!searchQuery.value.trim()) {
     errorMessage.value = 'Пожалуйста, введите поисковый запрос'
@@ -26,29 +24,17 @@ const searchBooks = async () => {
   errorMessage.value = ''
 
   try {
-    // Имитация API-запроса
-    await new Promise(resolve => setTimeout(resolve, 800))
-    
-    // Заглушечные данные
-    searchResults.value = [
-      {
-        id: '1',
-        title: 'Введение в Nuxt 3',
-        author: 'Алексей Иванов',
-        year: 2023,
-        description: 'Полное руководство по фреймворку Nuxt 3',
-        coverUrl: '/covers/nuxt-book.jpg'
-      },
-      {
-        id: '2',
-        title: 'Доступный веб-дизайн',
-        author: 'Мария Петрова',
-        year: 2022,
-        description: 'Принципы создания инклюзивных интерфейсов'
-      }
-    ]
+    const response = await fetch(`/api/books/search?q=${encodeURIComponent(searchQuery.value)}`)
+    const result = await response.json()
+
+    if (response.ok) {
+      searchResults.value = result.body || []
+    } else {
+      errorMessage.value = result.error || 'Ошибка при поиске книг'
+    }
   } catch (error) {
-    errorMessage.value = 'Ошибка при поиске книг. Пожалуйста, попробуйте позже.'
+    errorMessage.value = 'Ошибка сети. Пожалуйста, попробуйте позже.'
+    console.error('Search error:', error)
   } finally {
     isLoading.value = false
   }

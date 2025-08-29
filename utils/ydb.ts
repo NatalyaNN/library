@@ -1,3 +1,4 @@
+// utils\ydb.ts
 import YDBdriver from './ydb.config';
 
 export async function initDb() {
@@ -123,7 +124,7 @@ export async function createTable() {
    try {
       // Правильное использование для версии 5.11.1
       await YDBdriver.tableClient.withSession(async (session) => {
-         // Для DDL запросов используем executeSchemeQuery
+         // Для DDL запросов используем executeQuery
          await session.executeQuery(query);
       });
       console.log('Таблицы успешно созданы');
@@ -191,6 +192,7 @@ export async function describeTable(tableName: string): Promise<any> {
 }
 
 // Простая функция для тестирования соединения
+/*
 export async function testConnection(): Promise<boolean> {
    try {
       await YDBdriver.tableClient.withSession(async (session) => {
@@ -203,4 +205,4 @@ export async function testConnection(): Promise<boolean> {
       return false;
    }
 }
-
+*/

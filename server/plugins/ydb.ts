@@ -1,3 +1,4 @@
+// server\plugins\ydb.ts
 import { Driver, getCredentialsFromEnv } from 'ydb-sdk';
 import { defineNitroPlugin } from '#imports';
 
